@@ -93,14 +93,43 @@
         </div>
     </div>
 
+    <!-- Edit Product Modal -->
+    <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-lg w-full relative shadow-2xl">
+            <button id="closeEditModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl">✖</button>
+            <h3 class="text-2xl font-bold mb-4">Ürünü Düzenle</h3>
+            <input type="hidden" id="editProductId">
+            <div class="grid grid-cols-1 gap-3">
+                <input id="editProductName" class="px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600" placeholder="Ürün İsmi *">
+                <input id="editProductDesc" class="px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600" placeholder="Açıklama">
+                <select id="editProductCategory" class="px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600">
+                    <option>Telefon</option>
+                    <option>Laptop</option>
+                    <option>Tablet</option>
+                    <option>Aksesuar</option>
+                </select>
+                <input id="editProductImage" class="px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600" placeholder="Görsel URL *">
+                <input id="editProductPrice" type="number" class="px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600" placeholder="Fiyat (₺) *">
+                <input id="editProductOriginalPrice" type="number" class="px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600" placeholder="Eski Fiyat (₺)">
+                <input id="editProductStock" type="number" class="px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600" placeholder="Stok Adedi">
+            </div>
+            <div class="flex gap-3 mt-4">
+                <button id="saveEditBtn" class="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700">Kaydet</button>
+                <button id="cancelEditBtn" class="flex-1 bg-gray-200 py-3 rounded-xl hover:bg-gray-300">İptal</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Admin Panel -->
     <div id="adminPanel" class="hidden max-w-7xl mx-auto px-4 py-6">
         <div class="bg-white rounded-2xl shadow-2xl p-6 lg:p-8">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl lg:text-3xl font-bold">➕ Ürün Yönetimi</h2>
-                <button id="logoutBtn" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all">
-                    Çıkış Yap
-                </button>
+                <div class="flex gap-3 items-center">
+                    <button id="logoutBtn" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all">
+                        Çıkış Yap
+                    </button>
+                </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input type="text" id="productName" class="px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none" placeholder="Ürün İsmi *">
@@ -225,7 +254,7 @@
             console.debug('[init] initializeStorage START');
 
             try {
-                await db.enablePersistence();
+                await firebase.firestore().enablePersistence();
                 console.debug('[init] enablePersistence: succeeded');
             } catch (pErr) {
                 console.warn('[init] enablePersistence failed or not supported:', pErr && pErr.code ? pErr.code : pErr);
@@ -309,6 +338,18 @@
                 const discountPercent = hasDiscount ? Math.round((1 - (p.price || 0) / (p.originalPrice || p.price || 1)) * 100) : 0;
                 const waMessage = encodeURIComponent(`Merhaba, ${p.name} ürünü hakkında bilgi almak istiyorum.`);
 
+                // admin controls: Düzenle ve Sil
+                const adminControls = isAdmin ? `
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="openEditModal('${p.docId}')" class="flex-1 bg-yellow-400 text-black py-2 rounded-lg font-semibold hover:opacity-95">✏️ Düzenle</button>
+                        <button onclick="deleteProduct('${p.docId}')" class="flex-1 bg-red-500 text-white py-2 rounded-lg font-semibold hover:bg-red-600">🗑️ Sil</button>
+                    </div>
+                ` : `
+                    <a href="https://wa.me/905443894007?text=${waMessage}" target="_blank" class="block w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all text-center ${p.stock === 0 ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}">
+                        ${p.stock === 0 ? '❌ Stokta Yok' : '💬 WhatsApp ile İletişim'}
+                    </a>
+                `;
+
                 return `
                 <div class="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group relative">
                     ${hasDiscount ? `<div class="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold z-10">-%${discountPercent}</div>` : ''}
@@ -323,15 +364,7 @@
                             ${hasDiscount ? `<p class="text-sm line-through text-gray-400">${(p.originalPrice || 0).toLocaleString()} ₺</p>` : ''}
                             <p class="text-xl font-bold text-blue-600">${(p.price || 0).toLocaleString()} ₺</p>
                         </div>
-                        ${isAdmin ? `
-                            <button onclick="deleteProduct('${p.docId}')" class="w-full bg-red-500 text-white py-3 rounded-xl font-semibold hover:bg-red-600 transition-all">
-                                🗑️ Sil
-                            </button>
-                        ` : `
-                            <a href="https://wa.me/905443894007?text=${waMessage}" target="_blank" class="block w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all text-center ${p.stock === 0 ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}">
-                                ${p.stock === 0 ? '❌ Stokta Yok' : '💬 WhatsApp ile İletişim'}
-                            </a>
-                        `}
+                        ${adminControls}
                     </div>
                 </div>
             `;
@@ -380,6 +413,60 @@
             }
         }
 
+        // Edit modal logic
+        function openEditModal(docId) {
+            const p = products.find(x => x.docId === docId);
+            if (!p) { alert('Ürün bulunamadı. Yeniden yükleyin.'); return; }
+            document.getElementById('editProductId').value = docId;
+            document.getElementById('editProductName').value = p.name || '';
+            document.getElementById('editProductDesc').value = p.description || '';
+            document.getElementById('editProductCategory').value = p.category || 'Telefon';
+            document.getElementById('editProductImage').value = p.imageUrl || '';
+            document.getElementById('editProductPrice').value = p.price || '';
+            document.getElementById('editProductOriginalPrice').value = p.originalPrice || '';
+            document.getElementById('editProductStock').value = p.stock || 0;
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        document.getElementById('closeEditModal').addEventListener('click', () => {
+            document.getElementById('editModal').classList.add('hidden');
+        });
+        document.getElementById('cancelEditBtn').addEventListener('click', () => {
+            document.getElementById('editModal').classList.add('hidden');
+        });
+
+        document.getElementById('saveEditBtn').addEventListener('click', async () => {
+            if (!isAdmin) { alert('İzniniz yok.'); return; }
+            const docId = document.getElementById('editProductId').value;
+            const name = document.getElementById('editProductName').value.trim();
+            const desc = document.getElementById('editProductDesc').value.trim();
+            const category = document.getElementById('editProductCategory').value;
+            const image = document.getElementById('editProductImage').value.trim();
+            const price = parseFloat(document.getElementById('editProductPrice').value);
+            const originalPrice = parseFloat(document.getElementById('editProductOriginalPrice').value) || price;
+            const stock = parseInt(document.getElementById('editProductStock').value) || 0;
+
+            if (!name || !image || !price) { alert('Lütfen zorunlu alanları doldurun (isim, görsel, fiyat).'); return; }
+
+            try {
+                await db.collection('products').doc(docId).update({
+                    name,
+                    description: desc,
+                    category,
+                    imageUrl: image,
+                    price,
+                    originalPrice,
+                    stock,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                showNotification('Ürün güncellendi ✅');
+                document.getElementById('editModal').classList.add('hidden');
+            } catch (e) {
+                console.error('Güncelleme hatası', e);
+                alert('Güncelleme sırasında hata oluştu.');
+            }
+        });
+
         // UI interactions
         document.getElementById('mobileMenuBtn').addEventListener('click', () => {
             document.getElementById('mobileMenu').classList.toggle('hidden');
@@ -408,27 +495,44 @@
 
         // Authentication & Admin checks
         // Admin role check strategy:
-        // - After sign-in, we check Firestore collection 'admins' for a doc with id == user.uid.
-        // - If exists, treat user as admin. To make someone admin: create a document in 'admins' with the user's uid (done from server/console).
+        // - Öncelikle admins koleksiyonunda user.uid ile doc aranır.
+        // - Eğer bulunmazsa e-posta ile yedek sorgu yapılır (email alanına göre admins dokümanı varsa admin kabul edilir).
+        // - Eğer kullanıcı admin değilse kullanıcıya bilgi verilir.
         auth.onAuthStateChanged(async (user) => {
+            console.log('[AUTH] onAuthStateChanged', user);
             if (user) {
                 try {
+                    console.log('[AUTH] checking admins doc for uid:', user.uid);
                     const adminDoc = await db.collection('admins').doc(user.uid).get();
                     if (adminDoc.exists) {
                         isAdmin = true;
+                        console.log('[AUTH] Admin identified by UID');
+                    } else {
+                        // fallback by email (helpful for easier admin creation)
+                        console.log('[AUTH] No admin doc by UID, trying email fallback:', user.email);
+                        const q = await db.collection('admins').where('email', '==', user.email).limit(1).get();
+                        if (!q.empty) {
+                            isAdmin = true;
+                            console.log('[AUTH] Admin identified by email');
+                        } else {
+                            isAdmin = false;
+                            console.log('[AUTH] User is not admin');
+                        }
+                    }
+
+                    if (isAdmin) {
                         showNotification('Admin olarak giriş yapıldı 👤');
                         document.getElementById('adminPanel').classList.remove('hidden');
                     } else {
-                        isAdmin = false;
                         document.getElementById('adminPanel').classList.add('hidden');
-                        // optionally sign out if not admin:
-                        // await auth.signOut();
-                        // alert('Bu kullanıcı admin değil.');
+                        // Bilgilendirme:
+                        alert('Giriş başarılı ancak bu hesap admin değil. Admin yapmak için Firestore -> admins koleksiyonuna kullanıcı UID\'sini (veya email alanını) ekleyin.\n\nUID: ' + user.uid);
                     }
                 } catch (e) {
                     console.error('Admin kontrol hatası', e);
                     isAdmin = false;
                     document.getElementById('adminPanel').classList.add('hidden');
+                    alert('Admin kontrolü sırasında hata oluştu. Konsolu kontrol edin.');
                 }
             } else {
                 isAdmin = false;
