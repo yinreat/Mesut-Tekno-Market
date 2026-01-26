@@ -82,8 +82,6 @@
                 <div class="text-6xl mb-4">🔐</div>
                 <h2 class="text-3xl font-bold">Admin Girişi</h2>
             </div>
-            <input type="email" id="adminEmailInput" placeholder="E-posta" 
-                class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl mb-3 focus:border-blue-600 focus:outline-none text-lg">
             <input type="password" id="adminPasswordInput" placeholder="Şifre" 
                 class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl mb-4 focus:border-blue-600 focus:outline-none text-lg">
             <button id="loginBtn" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition-all">
@@ -205,6 +203,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
     <script>
+        const ADMIN_EMAIL = "admin@mesuttekno.com";
         // DEFAULT PRODUCTS
         const DEFAULT_PRODUCTS = [
             { id: 1, name: 'iPhone 15 Pro', description: '256GB, Titanium', imageUrl: 'https://images.unsplash.com/photo-1696446702883-ba4e6d7e7d42?w=400', price: 45000, originalPrice: 55000, category: 'Telefon', stock: 15 },
@@ -553,23 +552,21 @@
         document.getElementById('closeLoginModal').addEventListener('click', () => {
             document.getElementById('loginModal').classList.add('hidden');
         });
+document.getElementById('loginBtn').addEventListener('click', async () => {
+    const password = document.getElementById('adminPasswordInput').value;
 
-        document.getElementById('loginBtn').addEventListener('click', async () => {
-            const email = document.getElementById('adminEmailInput').value.trim();
-            const password = document.getElementById('adminPasswordInput').value;
-            if (!email || !password) { alert('E-posta ve şifre girin.'); return; }
+    try {
+        await auth.signInWithEmailAndPassword(ADMIN_EMAIL, password);
 
-            try {
-                await auth.signInWithEmailAndPassword(email, password);
-                // onAuthStateChanged will handle admin check and UI
-                document.getElementById('loginModal').classList.add('hidden');
-                document.getElementById('adminEmailInput').value = '';
-                document.getElementById('adminPasswordInput').value = '';
-            } catch (err) {
-                console.error('Giriş hatası', err);
-                alert('Giriş başarısız: ' + (err.message || err));
-            }
-        });
+        isAdmin = true;
+        document.getElementById('loginModal').classList.add('hidden');
+        document.getElementById('adminPanel').classList.remove('hidden');
+
+        showNotification("Admin girişi başarılı");
+    } catch (err) {
+        alert("Şifre yanlış");
+    }
+});
 
         document.getElementById('logoutBtn').addEventListener('click', async () => {
             try {
@@ -630,6 +627,15 @@
 
         // Initial load
         initializeStorage();
+        auth.onAuthStateChanged(user => {
+    if (user && user.email === ADMIN_EMAIL) {
+        isAdmin = true;
+        document.getElementById('adminPanel').classList.remove('hidden');
+    } else {
+        isAdmin = false;
+        document.getElementById('adminPanel').classList.add('hidden');
+    }
+});
     </script>
 </body>
 </html>
