@@ -85,7 +85,14 @@
     <!-- Products -->
     <div class="max-w-7xl mx-auto px-4 py-8">
         <div id="loadingMessage" class="text-center py-8 text-gray-600">Ürünler yükleniyor...</div>
+        
+        <!-- Ürün Sayısı -->
+        <div id="productCount" class="text-center mb-4 text-gray-600 font-medium"></div>
+        
         <div id="productsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+        
+        <!-- Sayfalama -->
+        <div id="pagination" class="flex justify-center items-center gap-2 mt-8"></div>
     </div>
 
     <script>
@@ -131,6 +138,8 @@
         let products = [];
         let isAdmin = false;
         let currentCategory = 'all';
+        let currentPage = 1;
+        const PRODUCTS_PER_PAGE = 12;
 
         // Ürünleri yükle
         async function loadProducts() {
@@ -164,9 +173,28 @@
 
         function render() {
             const filtered = products.filter(p => currentCategory === 'all' || p.category === currentCategory);
+            const totalPages = Math.ceil(filtered.length / PRODUCTS_PER_PAGE);
+            
+            // Sayfa numarasını kontrol et
+            if (currentPage > totalPages && totalPages > 0) {
+                currentPage = totalPages;
+            }
+            if (currentPage < 1) {
+                currentPage = 1;
+            }
+            
+            // Mevcut sayfadaki ürünleri al
+            const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
+            const endIndex = startIndex + PRODUCTS_PER_PAGE;
+            const pageProducts = filtered.slice(startIndex, endIndex);
+            
             const grid = document.getElementById('productsGrid');
             
-            grid.innerHTML = filtered.map(p => {
+            // Ürün sayısını göster
+            document.getElementById('productCount').textContent = 
+                `Toplam ${filtered.length} ürün${filtered.length > 0 ? ` (Sayfa ${currentPage}/${totalPages})` : ''}`;
+            
+            grid.innerHTML = pageProducts.map(p => {
                 const hasDiscount = p.originalPrice > p.price;
                 return `
                 <div class="bg-white rounded-lg shadow p-4 ${hasDiscount ? 'border-4 border-yellow-400' : ''}">
@@ -184,7 +212,77 @@
                     `}
                 </div>
             `}).join('');
+            
+            renderPagination(totalPages);
         }
+        
+        function renderPagination(totalPages) {
+            const pagination = document.getElementById('pagination');
+            
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            
+            // İlk sayfa butonu
+            html += `
+                <button onclick="goToPage(1)" 
+                    class="px-4 py-2 rounded-lg ${currentPage === 1 ? 'bg-gray-200 cursor-not-allowed' : 'bg-white hover:bg-gray-100'} border" 
+                    ${currentPage === 1 ? 'disabled' : ''}>
+                    ⏮️
+                </button>
+            `;
+            
+            // Önceki sayfa butonu
+            html += `
+                <button onclick="goToPage(${currentPage - 1})" 
+                    class="px-4 py-2 rounded-lg ${currentPage === 1 ? 'bg-gray-200 cursor-not-allowed' : 'bg-white hover:bg-gray-100'} border" 
+                    ${currentPage === 1 ? 'disabled' : ''}>
+                    ◀️
+                </button>
+            `;
+            
+            // Sayfa numaraları
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                html += `
+                    <button onclick="goToPage(${i})" 
+                        class="px-4 py-2 rounded-lg ${currentPage === i ? 'bg-blue-600 text-white' : 'bg-white hover:bg-gray-100'} border font-medium">
+                        ${i}
+                    </button>
+                `;
+            }
+            
+            // Sonraki sayfa butonu
+            html += `
+                <button onclick="goToPage(${currentPage + 1})" 
+                    class="px-4 py-2 rounded-lg ${currentPage === totalPages ? 'bg-gray-200 cursor-not-allowed' : 'bg-white hover:bg-gray-100'} border" 
+                    ${currentPage === totalPages ? 'disabled' : ''}>
+                    ▶️
+                </button>
+            `;
+            
+            // Son sayfa butonu
+            html += `
+                <button onclick="goToPage(${totalPages})" 
+                    class="px-4 py-2 rounded-lg ${currentPage === totalPages ? 'bg-gray-200 cursor-not-allowed' : 'bg-white hover:bg-gray-100'} border" 
+                    ${currentPage === totalPages ? 'disabled' : ''}>
+                    ⏭️
+                </button>
+            `;
+            
+            pagination.innerHTML = html;
+        }
+        
+        window.goToPage = function(page) {
+            currentPage = page;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            render();
+        };
 
         window.deleteProduct = async function(id) {
             if (confirm('Silmek istediğinize emin misiniz?')) {
@@ -275,6 +373,7 @@
                 });
                 e.target.className = 'category-btn px-4 py-2 rounded-full bg-blue-600 text-white font-medium';
                 currentCategory = e.target.dataset.category;
+                currentPage = 1; // Kategori değiştiğinde ilk sayfaya dön
                 render();
             });
         });
