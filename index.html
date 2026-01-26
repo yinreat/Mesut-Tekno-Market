@@ -259,23 +259,19 @@
         const PRODUCTS_PER_PAGE = 12;
         const STORAGE_KEY = 'mesut-tekno-products';
 
+        // localStorage tabanlı güvenilir persist yöntemine geçirildi
         async function initializeStorage() {
             try {
-                const result = await window.storage.get(STORAGE_KEY, true);
-                if (result && result.value) {
-                    products = JSON.parse(result.value);
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    products = JSON.parse(raw);
                 } else {
                     products = DEFAULT_PRODUCTS;
-                    await window.storage.set(STORAGE_KEY, JSON.stringify(products), true);
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
                 }
             } catch (error) {
-                console.log('İlk yükleme, varsayılan ürünler kullanılıyor');
+                console.error('initializeStorage hata:', error);
                 products = DEFAULT_PRODUCTS;
-                try {
-                    await window.storage.set(STORAGE_KEY, JSON.stringify(products), true);
-                } catch (saveError) {
-                    console.log('Ürünler kaydedildi');
-                }
             }
             document.getElementById('loadingMessage').style.display = 'none';
             render();
@@ -283,7 +279,7 @@
 
         async function saveProducts() {
             try {
-                await window.storage.set(STORAGE_KEY, JSON.stringify(products), true);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
                 return true;
             } catch (error) {
                 console.error('Kaydetme hatası:', error);
@@ -334,6 +330,7 @@
             grid.innerHTML = pageProducts.map(p => {
                 const hasDiscount = p.originalPrice > p.price;
                 const discountPercent = hasDiscount ? Math.round((1 - p.price / p.originalPrice) * 100) : 0;
+                const waMessage = encodeURIComponent(`Merhaba, ${p.name} ürünü hakkında bilgi almak istiyorum.`);
                 
                 return `
                 <div class="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group relative">
@@ -358,7 +355,7 @@
                                 🗑️ Sil
                             </button>
                         ` : `
-                            <a href="https://wa.me/905443894007?text=Merhaba, ${encodeURIComponent(p.name)} ürünü hakkında bilgi almak istiyorum." target="_blank" class="block w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all text-center ${p.stock === 0 ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}">
+                            <a href="https://wa.me/905443894007?text=${waMessage}" target="_blank" class="block w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all text-center ${p.stock === 0 ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}">
                                 ${p.stock === 0 ? '❌ Stokta Yok' : '💬 WhatsApp ile İletişim'}
                             </a>
                         `}
@@ -443,13 +440,17 @@
 
         document.querySelectorAll('.category-btn, .mobile-category-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                currentCategory = e.target.dataset.category;
+                const target = e.currentTarget; // güvenilir hedef
+                currentCategory = target.dataset.category;
                 currentPage = 1;
                 
                 document.querySelectorAll('.category-btn, .mobile-category-btn').forEach(b => {
-                    b.className = b.className.replace('bg-blue-600 text-white', 'bg-white hover:bg-gray-100');
+                    // basitçe sınıfları resetle
+                    b.classList.remove('bg-blue-600', 'text-white');
+                    b.classList.add('bg-white', 'hover:bg-gray-100');
                 });
-                e.target.className = e.target.className.replace('bg-white hover:bg-gray-100', 'bg-blue-600 text-white');
+                target.classList.remove('bg-white', 'hover:bg-gray-100');
+                target.classList.add('bg-blue-600', 'text-white');
                 
                 document.getElementById('mobileMenu').classList.add('hidden');
                 render();
