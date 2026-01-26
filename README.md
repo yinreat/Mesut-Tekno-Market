@@ -1,22 +1,11 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mesut Tekno Market</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50">
-    <!-- Top Bar -->
-    <div class="bg-blue-600 text-white text-sm py-2">
-        <div class="max-w-7xl mx-auto px-4 flex justify-between items-center">
-            <div class="flex gap-6">
-                <span>📞 +90 544 389 40 07</span>
-                <span>✉️ info@mesuttekno.com</span>
-            </div>
-        </div>
-    </div>
 
+                <span>📞 +90 544 389 40 07</span>
+        
+<head>
     <!-- Header -->
     <header class="bg-white shadow-sm sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 py-4">
