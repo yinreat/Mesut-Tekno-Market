@@ -84,11 +84,12 @@
 
     <!-- Products -->
     <div class="max-w-7xl mx-auto px-4 py-8">
+        <div id="loadingMessage" class="text-center py-8 text-gray-600">Ürünler yükleniyor...</div>
         <div id="productsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
     </div>
 
     <script>
-        let products = [
+        const DEFAULT_PRODUCTS = [
             {
                 id: 1,
                 name: 'iPhone 15 Pro',
@@ -127,8 +128,39 @@
             }
         ];
 
+        let products = [];
         let isAdmin = false;
         let currentCategory = 'all';
+
+        // Ürünleri yükle
+        async function loadProducts() {
+            try {
+                const result = await window.storage.get('mesut-tekno-products', true);
+                if (result && result.value) {
+                    products = JSON.parse(result.value);
+                } else {
+                    // İlk kez açılıyorsa varsayılan ürünleri kaydet
+                    products = DEFAULT_PRODUCTS;
+                    await saveProducts();
+                }
+            } catch (error) {
+                // Ürün yoksa varsayılanları kullan
+                products = DEFAULT_PRODUCTS;
+                await saveProducts();
+            }
+            document.getElementById('loadingMessage').style.display = 'none';
+            render();
+        }
+
+        // Ürünleri kaydet
+        async function saveProducts() {
+            try {
+                await window.storage.set('mesut-tekno-products', JSON.stringify(products), true);
+            } catch (error) {
+                console.error('Ürünler kaydedilemedi:', error);
+                alert('Ürünler kaydedilirken bir hata oluştu!');
+            }
+        }
 
         function render() {
             const filtered = products.filter(p => currentCategory === 'all' || p.category === currentCategory);
@@ -154,9 +186,10 @@
             `}).join('');
         }
 
-        window.deleteProduct = function(id) {
+        window.deleteProduct = async function(id) {
             if (confirm('Silmek istediğinize emin misiniz?')) {
                 products = products.filter(p => p.id !== id);
+                await saveProducts();
                 render();
             }
         };
@@ -202,7 +235,7 @@
             }
         });
 
-        document.getElementById('addProductBtn').addEventListener('click', () => {
+        document.getElementById('addProductBtn').addEventListener('click', async () => {
             const name = document.getElementById('productName').value;
             const desc = document.getElementById('productDesc').value;
             const category = document.getElementById('productCategory').value;
@@ -221,12 +254,15 @@
                     originalPrice: oldPrice
                 });
                 
+                await saveProducts();
+                
                 document.getElementById('productName').value = '';
                 document.getElementById('productDesc').value = '';
                 document.getElementById('productImage').value = '';
                 document.getElementById('productPrice').value = '';
                 document.getElementById('productOriginalPrice').value = '';
                 render();
+                alert('Ürün başarıyla eklendi!');
             } else {
                 alert('Lütfen gerekli alanları doldurun!');
             }
@@ -243,7 +279,8 @@
             });
         });
 
-        render();
+        // Sayfa açıldığında ürünleri yükle
+        loadProducts();
     </script>
 </body>
 </html>
