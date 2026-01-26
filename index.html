@@ -11,7 +11,12 @@
     <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm py-2">
         <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
             <div class="flex flex-wrap gap-4 justify-center sm:justify-start">
-                <a href="https://wa.me/905443894007" target="_blank" class="flex items-center gap-1 hover:underline">📞 WhatsApp için tıklayın</a>
+                <a href="https://wa.me/905443894007?text=Merhaba%20bilgi%20almak%20istiyorum"
+   onclick="if(/Android|iPhone/i.test(navigator.userAgent)) this.href='whatsapp://send?phone=905443894007&text=Merhaba%20bilgi%20almak%20istiyorum';"
+   target="_blank"
+   class="flex items-center gap-1 hover:underline">
+   WhatsApp için tıklayın
+</a>
                 <span class="flex items-center gap-1">✉️ info@mesuttekno.com</span>
             </div>
             <div class="text-xs">Kaliteli ürünler</div>
