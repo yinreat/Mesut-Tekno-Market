@@ -54,11 +54,45 @@
     // Enable offline persistence (isteğe bağlı)
     db.enablePersistence()
       .catch(function(err) {
-        if (err.code === 'failed-precondition') {
-          console.warn('Persistence failed - multiple tabs open.');
-        } else if (err.code === 'unimplemented') {
-          console.warn('Persistence is not available in this browser.');
-        }
+      // Import the functions you need from the SDKs you need
+
+import { initializeApp } from "firebase/app";
+
+import { getAnalytics } from "firebase/analytics";
+
+// TODO: Add SDKs for Firebase products that you want to use
+
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+
+// Your web app's Firebase configuration
+
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+
+const firebaseConfig = {
+
+  apiKey: "AIzaSyC_Y6kRF8CZdKJwihkEaSwy1nHBFJb7OUo",
+
+  authDomain: "mesut-tekno-market.firebaseapp.com",
+
+  projectId: "mesut-tekno-market",
+
+  storageBucket: "mesut-tekno-market.firebasestorage.app",
+
+  messagingSenderId: "242014287881",
+
+  appId: "1:242014287881:web:6200ff1d6497d2e36b60d8",
+
+  measurementId: "G-G8K16D1ZCQ"
+
+};
+
+
+// Initialize Firebase
+
+const app = initializeApp(firebaseConfig);
+
+const analytics = getAnalytics(app);
       });
 
     // --- Veri yükleme ve gerçek zamanlı dinleme ---
