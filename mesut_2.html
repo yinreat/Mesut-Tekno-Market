@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mesut Tekno Market</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC_Y6kRF8CZdKJwihkEaSwy1nHBFJb7OUo",
+  authDomain: "mesut-tekno-market.firebaseapp.com",
+  projectId: "mesut-tekno-market",
+  storageBucket: "mesut-tekno-market.firebasestorage.app",
+  messagingSenderId: "242014287881",
+  appId: "1:242014287881:web:6200ff1d6497d2e36b60d8",
+  measurementId: "G-G8K16D1ZCQ"
+};
+
+const app = initializeApp(firebaseConfig);
+getAnalytics(app);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const ADMIN = "admin@mesuttekno.com";
+
+const DEFAULTS = [
+  {name:"ASUS ROG Strix G16 Gaming Laptop",brand:"ASUS",cat:"Bilgisayar",price:52999,sale:47999,img:"https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=400&q=80",rating:4.9,reviews:1241},
+  {name:"HP EliteBook 840 G10",brand:"HP",cat:"Bilgisayar",price:38999,sale:34999,img:"https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&q=80",rating:4.7,reviews:654},
+  {name:"Dell XPS 15 OLED i7",brand:"Dell",cat:"Bilgisayar",price:61999,sale:55999,img:"https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=400&q=80",rating:4.8,reviews:432},
+  {name:"Apple MacBook Pro M3 Pro",brand:"Apple",cat:"Bilgisayar",price:74999,sale:69999,img:"https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&q=80",rating:4.9,reviews:876},
+  {name:"TP-Link Archer AX73 Wi-Fi 6",brand:"TP-Link",cat:"Modem",price:2499,sale:1999,img:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80",rating:4.8,reviews:3421},
+  {name:"ASUS RT-AX88U Pro Dual Band",brand:"ASUS",cat:"Modem",price:4999,sale:3999,img:"https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=400&q=80",rating:4.7,reviews:1823},
+  {name:"MikroTik hAP ax3 Wi-Fi 6",brand:"MikroTik",cat:"Modem",price:3299,sale:2799,img:"https://images.unsplash.com/photo-1606904825846-647eb07f5be2?w=400&q=80",rating:4.7,reviews:543},
+  {name:"TP-Link Deco XE75 Mesh",brand:"TP-Link",cat:"Modem",price:5999,sale:4999,img:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80",rating:4.8,reviews:1102},
+  {name:"Hikvision DS-2CD2143G2 4MP",brand:"Hikvision",cat:"Guvenlik Kamerasi",price:1899,sale:1499,img:"https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=400&q=80",rating:4.8,reviews:2100},
+  {name:"Dahua 8MP 4K Ultra HD PoE",brand:"Dahua",cat:"Guvenlik Kamerasi",price:2299,sale:1799,img:"https://images.unsplash.com/photo-1582139329536-e7284fece509?w=400&q=80",rating:4.7,reviews:1456},
+  {name:"TP-Link Tapo C310 Dis Mekan",brand:"TP-Link",cat:"Guvenlik Kamerasi",price:899,sale:749,img:"https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=400&q=80",rating:4.5,reviews:4231},
+  {name:"Reolink RLC-810A 4K PoE",brand:"Reolink",cat:"Guvenlik Kamerasi",price:1599,sale:1299,img:"https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80",rating:4.6,reviews:987},
+  {name:"Hikvision DS-7608NI-K2 NVR",brand:"Hikvision",cat:"NVR/DVR",price:4999,sale:3999,img:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80",rating:4.9,reviews:321},
+  {name:"Imou Cruiser SE 4MP PTZ",brand:"Imou",cat:"Guvenlik Kamerasi",price:1199,sale:899,img:"https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=400&q=80",rating:4.5,reviews:2341},
+  {name:"Logitech MX Master 3S",brand:"Logitech",cat:"Aksesuar",price:2999,sale:2499,img:"https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=400&q=80",rating:4.8,reviews:4231},
+  {name:"HP LaserJet Pro M404dn",brand:"HP",cat:"Yazici",price:8999,sale:7499,img:"https://images.unsplash.com/photo-1612815154858-60aa4c59eaa6?w=400&q=80",rating:4.7,reviews:876}
+];
+
+window.G = { products:[], filtered:[], isAdmin:false, loggedIn:false };
+
+async function loadProducts() {
+  setLoading(true);
+  try {
+    const q = query(collection(db,"products"), orderBy("createdAt","desc"));
+    onSnapshot(q, snap => {
+      if (snap.empty) { seedProducts(); return; }
+      G.products = snap.docs.map(d=>({id:d.id,...d.data()}));
+      G.filtered = [...G.products];
+      renderProducts(G.filtered);
+      if (G.isAdmin) buildAdminPanel();
+      setLoading(false);
+    });
+  } catch(e) { setLoading(false); toast("Hata: "+e.message); }
+}
+
+async function seedProducts() {
+  for (const p of DEFAULTS) {
+    await addDoc(collection(db,"products"),{...p,createdAt:serverTimestamp()});
+  }
+}
+
+window.addProduct = async function() {
+  const n = id("apName").value.trim(), br = id("apBrand").value.trim();
+  const pr = parseInt(id("apPrice").value), sl = parseInt(id("apSale").value)||null;
+  const ct = id("apCat").value, im = id("apImg").value.trim()||"https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&q=80";
+  if (!n||!br||!pr) { toast("Lutfen zorunlu alanlari doldurun!"); return; }
+  try {
+    await addDoc(collection(db,"products"),{name:n,brand:br,cat:ct,price:pr,sale:sl,img:im,rating:5.0,reviews:0,createdAt:serverTimestamp()});
+    ["apName","apBrand","apPrice","apSale","apImg"].forEach(x=>id(x).value="");
+    toast(n+" eklendi!");
+  } catch(e) { toast("Hata: "+e.message); }
+};
+
+window.deleteProduct = async function(pid) {
+  if (!confirm("Bu urunu silmek istiyor musunuz?")) return;
+  try { await deleteDoc(doc(db,"products",pid)); toast("Urun silindi."); }
+  catch(e) { toast("Hata: "+e.message); }
+};
+
+onAuthStateChanged(auth, user => {
+  if (user) {
+    G.loggedIn = true;
+    G.isAdmin = user.email === ADMIN;
+    const nm = user.displayName||user.email.split("@")[0];
+    id("authArea").innerHTML = `<div class="user-info">
+      <div class="uavt">${nm[0].toUpperCase()}</div>
+      <div class="uname">${nm}<small>${G.isAdmin?"Admin":"Uye"}</small></div>
+      <button class="btn-logout" onclick="doLogout()">Cikis</button>
+    </div>`;
+    if (G.isAdmin) { id("adminPanel").classList.add("show"); buildAdminPanel(); }
+  } else {
+    G.loggedIn = false; G.isAdmin = false;
+    id("authArea").innerHTML = `<button class="btn-login" onclick="openModal()">Giris Yap</button>`;
+    id("adminPanel").classList.remove("show");
+  }
+});
+
+function buildAdminPanel() {
+  id("adminStats").innerHTML = `
+    <div class="scard"><div class="sn">${G.products.length}</div><div class="sl">Urun</div></div>
+    <div class="scard"><div class="sn">${[...new Set(G.products.map(p=>p.cat))].length}</div><div class="sl">Kategori</div></div>`;
+  id("apList").innerHTML = G.products.map(p=>`
+    <div class="aprow">
+      <img src="${p.img}" onerror="this.src='https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=60&q=80'" style="width:46px;height:46px;object-fit:cover;border-radius:8px;flex-shrink:0">
+      <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:.84rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div>
+      <div style="font-size:.74rem;color:#6b7280">${p.cat} - ${(p.sale||p.price).toLocaleString()} TL</div></div>
+      <button onclick="deleteProduct('${p.id}')" style="background:#fee2e2;border:none;color:#e53e3e;padding:6px 10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:.8rem">Sil</button>
+    </div>`).join("");
+}
+
+window.doLogin = async function() {
+  const e = id("loginEmail").value.trim(), p = id("loginPassword").value, er = id("loginError");
+  try { er.style.display="none"; await signInWithEmailAndPassword(auth,e,p); closeModal(); toast("Hosgeldiniz!"); }
+  catch { er.textContent="E-posta veya sifre hatali!"; er.style.display="block"; }
+};
+window.doRegister = async function() {
+  const nm=id("regName").value.trim(), em=id("regEmail").value.trim(), ps=id("regPass").value, er=id("regError");
+  if (!nm||!em||ps.length<6) { er.style.display="block"; return; }
+  try {
+    er.style.display="none";
+    const c = await createUserWithEmailAndPassword(auth,em,ps);
+    await updateProfile(c.user,{displayName:nm});
+    closeModal(); toast("Hosgeldiniz "+nm+"!");
+  } catch(e) { er.textContent=e.code==="auth/email-already-in-use"?"Bu e-posta kayitli!":e.message; er.style.display="block"; }
+};
+window.doLogout = async function() { await signOut(auth); toast("Cikis yapildi."); };
+
+loadProducts();
+
+function id(x) { return document.getElementById(x); }
+function setLoading(on) {
+  const b = id("lbar");
+  if (on) { b.style.width="75%"; b.style.opacity="1"; }
+  else { b.style.width="100%"; setTimeout(()=>{ b.style.opacity="0"; setTimeout(()=>{ b.style.width="0"; b.style.opacity="1"; },500); },150); }
+}
+</script>
+<style>
+:root{--bd:#0a3d91;--bm:#1565C0;--bl:#42A5F5;--bp:#E3F2FD;--ba:#0288D1;
+--bg:#f4f6fb;--gt:#6b7280;--gb:#e2e8f0;--td:#1a202c;--red:#e53e3e;--grn:#38a169;
+--sh:0 2px 14px rgba(21,101,192,.10);--shl:0 8px 32px rgba(21,101,192,.18)}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:"Poppins",sans-serif;background:var(--bg);color:var(--td)}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:900;backdrop-filter:blur(3px)}
+.overlay.active{display:block}
+#lbar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--bl),var(--bm));z-index:9999;width:0;transition:width .3s,opacity .4s}
+/* MODAL */
+.modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.9);
+background:#fff;border-radius:20px;padding:36px 32px;width:min(420px,92vw);
+z-index:1000;box-shadow:var(--shl);opacity:0;transition:all .25s}
+.modal.active{display:block;transform:translate(-50%,-50%) scale(1);opacity:1}
+.mhd{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+.mhd h2{font-family:"Nunito",sans-serif;font-size:1.45rem;font-weight:800;color:var(--bd)}
+.mcls{background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--gt)}
+.mcls:hover{color:var(--bm)}
+.tabs{display:flex;background:var(--bp);border-radius:12px;padding:4px;margin-bottom:20px}
+.tab{flex:1;padding:9px;border:none;background:none;border-radius:9px;font-family:"Poppins",sans-serif;font-weight:600;font-size:.88rem;cursor:pointer;color:var(--gt);transition:.2s}
+.tab.on{background:var(--bm);color:#fff;box-shadow:0 2px 8px rgba(21,101,192,.25)}
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:.8rem;font-weight:600;color:var(--bd);margin-bottom:5px}
+.fg input{width:100%;padding:11px 15px;border:2px solid var(--gb);border-radius:12px;
+font-family:"Poppins",sans-serif;font-size:.9rem;outline:none;transition:.2s;background:#fafcff}
+.fg input:focus{border-color:var(--bm);background:#fff}
+.btnp{width:100%;padding:13px;background:linear-gradient(135deg,var(--bm),var(--bl));color:#fff;
+border:none;border-radius:12px;font-family:"Nunito",sans-serif;font-size:1rem;font-weight:800;cursor:pointer;transition:.2s;margin-top:4px}
+.btnp:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(21,101,192,.35)}
+.err{color:var(--red);font-size:.8rem;margin-top:6px;display:none}
+/* HEADER */
+header{background:linear-gradient(135deg,var(--bd),var(--bm));position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(10,61,145,.3)}
+.htop{display:flex;align-items:center;gap:12px;padding:12px 20px;max-width:1280px;margin:0 auto}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
+.logo-icon{width:42px;height:42px;background:linear-gradient(135deg,#fff,#e3f2fd);border-radius:12px;overflow:hidden;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.logo-icon img{width:100%;height:100%;object-fit:cover}
+.logo-text{font-family:"Nunito",sans-serif;font-weight:900;font-size:1.15rem;color:#fff;line-height:1.1}
+.logo-text span{color:var(--bl);display:block;font-size:.72rem;font-weight:600;letter-spacing:1px}
+.sbar{flex:1;display:flex;background:#fff;border-radius:12px;overflow:hidden;max-width:600px;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+.sbar input{flex:1;padding:11px 16px;border:none;outline:none;font-family:"Poppins",sans-serif;font-size:.9rem;color:var(--td)}
+.sbar button{padding:11px 20px;background:var(--bl);border:none;cursor:pointer;color:#fff;font-weight:700;font-size:.88rem;transition:.2s}
+.sbar button:hover{background:var(--ba)}
+.hact{display:flex;align-items:center;gap:8px;margin-left:auto}
+.ibtn{background:rgba(255,255,255,.15);border:none;color:#fff;width:42px;height:42px;border-radius:12px;cursor:pointer;font-size:1.05rem;display:flex;align-items:center;justify-content:center;transition:.2s;position:relative}
+.ibtn:hover{background:rgba(255,255,255,.25)}
+.badge{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.btn-login{background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.4);color:#fff;padding:9px 18px;border-radius:12px;font-family:"Nunito",sans-serif;font-weight:700;font-size:.88rem;cursor:pointer;transition:.2s}
+.btn-login:hover{background:#fff;color:var(--bm)}
+.user-info{display:flex;align-items:center;gap:8px}
+.uavt{width:36px;height:36px;background:linear-gradient(135deg,var(--bl),#fff);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--bd);border:2px solid rgba(255,255,255,.5);font-size:.9rem}
+.uname{color:#fff;font-size:.85rem;font-weight:600}
+.uname small{display:block;font-size:.7rem;color:var(--bl);font-weight:400}
+.btn-logout{background:none;border:1px solid rgba(255,255,255,.4);color:#fff;padding:6px 12px;border-radius:8px;font-size:.78rem;cursor:pointer;transition:.2s}
+.btn-logout:hover{background:rgba(255,0,0,.2)}
+/* NAV */
+nav{background:rgba(255,255,255,.1);border-top:1px solid rgba(255,255,255,.1)}
+.nav-in{display:flex;align-items:center;gap:4px;padding:6px 20px;max-width:1280px;margin:0 auto;overflow-x:auto;scrollbar-width:none}
+.nav-in::-webkit-scrollbar{display:none}
+.nl{color:rgba(255,255,255,.85);padding:7px 14px;border-radius:8px;font-size:.83rem;font-weight:600;white-space:nowrap;transition:.2s;cursor:pointer;user-select:none}
+.nl:hover,.nl.on{background:rgba(255,255,255,.2);color:#fff}
+/* HERO */
+.hero{max-width:1280px;margin:24px auto 0;padding:0 20px}
+.hero-in{background:linear-gradient(135deg,var(--bd),#1976D2);border-radius:20px;padding:40px 48px;display:flex;align-items:center;justify-content:space-between;min-height:200px;overflow:hidden;position:relative;box-shadow:var(--shl)}
+.hero-in::before{content:"";position:absolute;top:-60px;right:-60px;width:280px;height:280px;background:rgba(255,255,255,.05);border-radius:50%}
+.htxt h1{font-family:"Nunito",sans-serif;font-size:clamp(1.5rem,3vw,2.2rem);font-weight:900;color:#fff;line-height:1.2;margin-bottom:8px}
+.htxt p{color:rgba(255,255,255,.8);font-size:.95rem;margin-bottom:20px}
+.hbadge{display:inline-block;background:var(--red);color:#fff;padding:5px 14px;border-radius:20px;font-size:.8rem;font-weight:700;margin-bottom:12px}
+.btnhero{background:#fff;color:var(--bm);padding:12px 28px;border-radius:12px;font-family:"Nunito",sans-serif;font-weight:800;font-size:.95rem;border:none;cursor:pointer;transition:.2s}
+.btnhero:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.himg{width:clamp(100px,16vw,200px);height:150px;object-fit:contain;filter:drop-shadow(0 8px 24px rgba(0,0,0,.35));animation:flt 3s ease-in-out infinite;position:relative;z-index:1}
+@keyframes flt{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+/* ADMIN */
+.admin-panel{display:none;max-width:1280px;margin:24px auto;padding:0 20px}
+.admin-panel.show{display:block}
+.abox{background:#fff;border-radius:20px;padding:28px;box-shadow:var(--sh)}
+.abox h2{font-family:"Nunito",sans-serif;font-weight:900;color:var(--bd);margin-bottom:20px;font-size:1.25rem}
+.astats{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+.scard{background:var(--bp);border-radius:14px;padding:16px;text-align:center}
+.sn{font-family:"Nunito",sans-serif;font-size:1.8rem;font-weight:900;color:var(--bm)}
+.sl{font-size:.78rem;color:var(--gt);font-weight:600}
+.aform{border-top:2px solid var(--gb);padding-top:20px;margin-bottom:24px}
+.aform h3{font-family:"Nunito",sans-serif;font-weight:800;color:var(--bd);margin-bottom:14px}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.fgs label{display:block;font-size:.8rem;font-weight:600;color:var(--bd);margin-bottom:5px}
+.fgs input,.fgs select{width:100%;padding:10px 12px;border:2px solid var(--gb);border-radius:10px;font-family:"Poppins",sans-serif;font-size:.85rem;outline:none;transition:.2s}
+.fgs input:focus,.fgs select:focus{border-color:var(--bm)}
+.badd{background:linear-gradient(135deg,var(--grn),#48bb78);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-family:"Nunito",sans-serif;font-weight:800;cursor:pointer;transition:.2s}
+.badd:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(56,161,105,.3)}
+.aplist-w{border-top:2px solid var(--gb);padding-top:20px}
+.aplist-w h3{font-family:"Nunito",sans-serif;font-weight:800;color:var(--bd);margin-bottom:12px}
+#apList{max-height:320px;overflow-y:auto}
+.aprow{display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border-radius:10px;margin-bottom:8px}
+/* SECTION */
+.sec{max-width:1280px;margin:0 auto 32px;padding:0 20px}
+.sechd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.sectitle{font-family:"Nunito",sans-serif;font-size:1.3rem;font-weight:900;color:var(--bd);display:flex;align-items:center;gap:8px}
+.sectitle::before{content:"";display:block;width:4px;height:24px;background:linear-gradient(var(--bm),var(--bl));border-radius:4px}
+.seeall{color:var(--bm);font-size:.85rem;font-weight:600;text-decoration:none;border:1px solid var(--bm);padding:6px 14px;border-radius:8px;transition:.2s;cursor:pointer}
+.seeall:hover{background:var(--bm);color:#fff}
+/* PRODUCTS */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+.pcard{background:#fff;border-radius:18px;overflow:hidden;transition:.25s;cursor:default;box-shadow:var(--sh);border:2px solid transparent;position:relative}
+.pcard:hover{transform:translateY(-6px);box-shadow:var(--shl);border-color:var(--bp)}
+.pimg{background:var(--bp);height:190px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.pimg img{width:100%;height:100%;object-fit:cover;transition:.3s}
+.pcard:hover .pimg img{transform:scale(1.07)}
+.dbadge{position:absolute;top:10px;left:10px;background:var(--red);color:#fff;font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:8px;z-index:1}
+.fbtn{position:absolute;top:10px;right:10px;background:#fff;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.1);transition:.2s;z-index:1}
+.fbtn:hover,.fbtn.fav{background:var(--red);color:#fff}
+.pinfo{padding:14px}
+.pbrand{font-size:.72rem;color:var(--gt);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.pname{font-size:.88rem;font-weight:600;color:var(--td);margin:4px 0 8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4}
+.prat{display:flex;align-items:center;gap:4px;margin-bottom:8px}
+.stars{color:#f59e0b;font-size:.75rem}
+.rc{font-size:.72rem;color:var(--gt)}
+.pprice{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.pnew{font-family:"Nunito",sans-serif;font-size:1.15rem;font-weight:900;color:var(--bm)}
+.pold{font-size:.8rem;color:var(--gt);text-decoration:line-through}
+.bcart{width:100%;margin-top:10px;padding:10px;background:linear-gradient(135deg,var(--bm),var(--bl));color:#fff;border:none;border-radius:10px;font-family:"Nunito",sans-serif;font-weight:700;font-size:.88rem;cursor:pointer;transition:.2s}
+.bcart:hover{transform:scale(1.02);box-shadow:0 4px 14px rgba(21,101,192,.3)}
+/* BANNERS */
+.banners{max-width:1280px;margin:0 auto 32px;padding:0 20px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.bst{border-radius:18px;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;overflow:hidden;position:relative;box-shadow:var(--sh);min-height:120px}
+.bst.b1{background:linear-gradient(135deg,var(--bm),var(--bl))}.bst.b2{background:linear-gradient(135deg,var(--bd),var(--ba))}
+.bst-t h3{font-family:"Nunito",sans-serif;font-weight:900;font-size:1.1rem;color:#fff;margin-bottom:4px}
+.bst-t p{font-size:.82rem;color:rgba(255,255,255,.8);margin-bottom:12px}
+.bbt{background:#fff;color:var(--bm);border:none;padding:8px 18px;border-radius:10px;font-weight:700;font-size:.82rem;cursor:pointer;transition:.2s}
+.bbt:hover{transform:scale(1.05)}
+.bimg{width:80px;height:80px;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.2))}
+/* CART */
+.cart-sb{position:fixed;right:-400px;top:0;bottom:0;width:380px;background:#fff;z-index:1001;box-shadow:-8px 0 40px rgba(0,0,0,.2);transition:.3s;display:flex;flex-direction:column}
+.cart-sb.open{right:0}
+.cart-hd{padding:20px 24px;background:linear-gradient(135deg,var(--bd),var(--bm));color:#fff;display:flex;align-items:center;justify-content:space-between}
+.cart-hd h2{font-family:"Nunito",sans-serif;font-weight:900}
+.ccls{background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer}
+.citems{flex:1;overflow-y:auto;padding:16px}
+.ci{display:flex;gap:12px;padding:12px;background:var(--bg);border-radius:12px;margin-bottom:10px}
+.ci-img{width:56px;height:56px;object-fit:cover;border-radius:10px;flex-shrink:0;background:var(--bp)}
+.ci-info{flex:1}
+.ci-nm{font-size:.85rem;font-weight:600;margin-bottom:4px}
+.ci-pr{font-family:"Nunito",sans-serif;font-weight:800;color:var(--bm);font-size:.95rem}
+.ci-qt{display:flex;align-items:center;gap:8px;margin-top:6px}
+.qbt{width:26px;height:26px;border-radius:8px;border:2px solid var(--gb);background:#fff;cursor:pointer;font-weight:700;font-size:.9rem;display:flex;align-items:center;justify-content:center}
+.qbt:hover{background:var(--bm);color:#fff;border-color:var(--bm)}
+.qn{font-weight:700;min-width:20px;text-align:center}
+.crm{background:none;border:none;color:var(--red);cursor:pointer;font-size:.8rem;margin-left:auto}
+.cart-ft{padding:20px 24px;border-top:2px solid var(--gb)}
+.cttl{display:flex;justify-content:space-between;margin-bottom:16px}
+.cttl span{font-family:"Nunito",sans-serif;font-weight:900;font-size:1.2rem}
+.cttl .tp{color:var(--bm)}
+.bco{width:100%;padding:14px;background:linear-gradient(135deg,var(--bm),var(--bl));color:#fff;border:none;border-radius:12px;font-family:"Nunito",sans-serif;font-weight:900;font-size:1rem;cursor:pointer;transition:.2s}
+.bco:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(21,101,192,.35)}
+.empty-c{text-align:center;padding:40px 20px;color:var(--gt)}
+.ei{font-size:3rem;margin-bottom:10px}
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bd);color:#fff;padding:12px 24px;border-radius:12px;font-weight:600;font-size:.9rem;z-index:2000;transition:.3s;box-shadow:var(--shl);max-width:90vw;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0)}
+/* FOOTER */
+footer{background:var(--bd);color:rgba(255,255,255,.8);padding:40px 20px 20px;margin-top:48px}
+.fin{max-width:1280px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:32px}
+.fc h4{font-family:"Nunito",sans-serif;font-weight:800;color:#fff;margin-bottom:12px}
+.fc a{display:block;color:rgba(255,255,255,.6);font-size:.83rem;text-decoration:none;margin-bottom:8px;cursor:pointer}
+.fc a:hover{color:var(--bl)}
+.fbot{max-width:1280px;margin:32px auto 0;border-top:1px solid rgba(255,255,255,.1);padding-top:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.fbot p{font-size:.78rem;color:rgba(255,255,255,.4)}
+@media(max-width:768px){
+  .htop{flex-wrap:wrap;padding:10px 14px;gap:8px}
+  .logo{order:1}.hact{order:2;margin-left:auto}.sbar{order:3;width:100%;max-width:100%}
+  .hero-in{padding:24px 20px;flex-direction:column;text-align:center;gap:16px}
+  .himg{width:90px;height:70px}
+  .qg{grid-template-columns:repeat(3,1fr)}
+  .pgrid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .banners{grid-template-columns:1fr}
+  .cart-sb{width:100%;right:-100%}
+  .fr{grid-template-columns:1fr}
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.pcard{animation:fadeUp .4s ease both}
+</style>
+</head>
+<body>
+<div id="lbar"></div>
+<div class="overlay" id="overlay" onclick="closeAll()"></div>
+<div class="toast" id="toastEl"></div>
+
+<!-- CART SIDEBAR -->
+<div class="cart-sb" id="cartSb">
+  <div class="cart-hd"><h2>Sepetim</h2><button class="ccls" onclick="toggleCart()">&#10005;</button></div>
+  <div class="citems" id="cartItems"><div class="empty-c"><div class="ei">&#128722;</div><p>Sepetiniz bos</p></div></div>
+  <div class="cart-ft" id="cartFt" style="display:none">
+    <div class="cttl"><span>Toplam:</span><span class="tp" id="cartTotal">&#8378;0</span></div>
+    <button class="bco" onclick="checkout()">Satin Al &#10003;</button>
+  </div>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="modal" id="loginModal">
+  <div class="mhd"><h2>Hesabim</h2><button class="mcls" onclick="closeModal()">&#10005;</button></div>
+  <div class="tabs">
+    <button class="tab on" onclick="switchTab('login')">Giris Yap</button>
+    <button class="tab" onclick="switchTab('reg')">Uye Ol</button>
+  </div>
+  <div id="loginForm">
+    <div class="fg"><label>E-posta</label><input type="email" id="loginEmail" placeholder="email@ornek.com"></div>
+    <div class="fg"><label>Sifre</label><input type="password" id="loginPassword" placeholder="Sifreniz" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="err" id="loginError">E-posta veya sifre hatali!</div>
+    <button class="btnp" onclick="doLogin()">Giris Yap &#8594;</button>
+  </div>
+  <div id="regForm" style="display:none">
+    <div class="fg"><label>Ad Soyad</label><input type="text" id="regName" placeholder="Adiniz Soyadiniz"></div>
+    <div class="fg"><label>E-posta</label><input type="email" id="regEmail" placeholder="email@ornek.com"></div>
+    <div class="fg"><label>Sifre (min 6 karakter)</label><input type="password" id="regPass" placeholder="Sifreniz"></div>
+    <div class="err" id="regError">Lutfen tum alanlari doldurun!</div>
+    <button class="btnp" onclick="doRegister()">Uye Ol &#8594;</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="htop">
+    <a href="#" class="logo">
+      <div class="logo-icon">
+        <img src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=80&q=80" alt="Logo" onerror="this.parentElement.innerHTML='&#128187;'">
+      </div>
+      <div class="logo-text">MESUT TEKNO<span>MARKET</span></div>
+    </a>
+    <div class="sbar">
+      <input type="text" id="searchInput" placeholder="Bilgisayar, modem, guvenlik kamerasi ara..." oninput="filterProducts()">
+      <button onclick="filterProducts()">Ara</button>
+    </div>
+    <div class="hact">
+      <button class="ibtn" onclick="toggleCart()">&#128722;<span class="badge" id="cartBadge">0</span></button>
+      <div id="authArea"><button class="btn-login" onclick="openModal()">Giris Yap</button></div>
+    </div>
+  </div>
+  <nav>
+    <div class="nav-in">
+      <span class="nl on" onclick="resetFilter()">Ana Sayfa</span>
+      <span class="nl" onclick="filterCat('Bilgisayar')">Bilgisayar</span>
+      <span class="nl" onclick="filterCat('Modem')">Modem &amp; Router</span>
+      <span class="nl" onclick="filterCat('Guvenlik Kamerasi')">Guvenlik Kamerasi</span>
+      <span class="nl" onclick="filterCat('NVR/DVR')">NVR / DVR</span>
+      <span class="nl" onclick="filterCat('Aksesuar')">Aksesuar</span>
+      <span class="nl" onclick="filterCat('Yazici')">Yazici</span>
+    </div>
+  </nav>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-in">
+    <div class="htxt">
+      <div class="hbadge">Ozel Kampanya</div>
+      <h1>Guvenlik &amp; Teknoloji<br>Tek Adreste!</h1>
+      <p>Kamera sistemleri, modemler ve bilgisayarlar sizi bekliyor</p>
+      <button class="btnhero" onclick="scrollToProds()">Alisverise Basla &#8594;</button>
+    </div>
+    <img class="himg" src="https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=300&q=80" alt="" onerror="this.style.display='none'">
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="admin-panel" id="adminPanel">
+  <div class="abox">
+    <h2>Yonetici Paneli</h2>
+    <div class="astats" id="adminStats"></div>
+    <div class="aform">
+      <h3>Yeni Urun Ekle</h3>
+      <div class="fr">
+        <div class="fgs"><label>Urun Adi *</label><input type="text" id="apName" placeholder="Hikvision DS-2CD2143G2"></div>
+        <div class="fgs"><label>Marka *</label><input type="text" id="apBrand" placeholder="Hikvision"></div>
+      </div>
+      <div class="fr">
+        <div class="fgs"><label>Fiyat (TL) *</label><input type="number" id="apPrice" placeholder="1899"></div>
+        <div class="fgs"><label>Indirimli Fiyat (TL)</label><input type="number" id="apSale" placeholder="1499"></div>
+      </div>
+      <div class="fr">
+        <div class="fgs"><label>Kategori</label>
+          <select id="apCat">
+            <option>Bilgisayar</option><option>Modem</option><option>Guvenlik Kamerasi</option>
+            <option>NVR/DVR</option><option>Aksesuar</option><option>Yazici</option>
+          </select>
+        </div>
+        <div class="fgs"><label>Gorsel URL</label><input type="url" id="apImg" placeholder="https://urun-resmi.com/foto.jpg"></div>
+      </div>
+      <button class="badd" onclick="addProduct()">+ Urun Ekle</button>
+    </div>
+    <div class="aplist-w">
+      <h3>Tum Urunler</h3>
+      <div id="apList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PRODUCTS -->
+<div class="sec" id="prodSec">
+  <div class="sechd">
+    <div class="sectitle" id="secTitle">One Cikan Urunler</div>
+    <span class="seeall" onclick="resetFilter()">Tumunu Gor</span>
+  </div>
+  <div class="pgrid" id="prodGrid"><div style="grid-column:1/-1;text-align:center;padding:60px;color:#6b7280">Yukleniyor...</div></div>
+</div>
+
+<!-- BANNERS -->
+<div class="banners">
+  <div class="bst b1">
+    <div class="bst-t"><h3>Ucretsiz Kargo</h3><p>500 TL uzeri siparislerde kargo bedava!</p><button class="bbt" onclick="scrollToProds()">Hemen Al</button></div>
+    <img class="bimg" src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=150&q=80" alt="" onerror="this.style.display='none'">
+  </div>
+  <div class="bst b2">
+    <div class="bst-t"><h3>Kurulum Hizmeti</h3><p>Kamera sistemlerini biz kuralim!</p><button class="bbt" onclick="toast('Iletisim: admin@mesuttekno.com')">Bilgi Al</button></div>
+    <img class="bimg" src="https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=150&q=80" alt="" onerror="this.style.display='none'">
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="fin">
+    <div class="fc">
+      <h4>Mesut Tekno Market</h4>
+      <p style="font-size:.83rem;color:rgba(255,255,255,.6);line-height:1.7;margin-top:4px">Bilgisayar, modem ve guvenlik kamerasi alaninda guvenilir adresiniz.</p>
+    </div>
+    <div class="fc">
+      <h4>Kategoriler</h4>
+      <a onclick="filterCat('Bilgisayar')">Bilgisayar</a>
+      <a onclick="filterCat('Modem')">Modem &amp; Router</a>
+      <a onclick="filterCat('Guvenlik Kamerasi')">Guvenlik Kamerasi</a>
+      <a onclick="filterCat('NVR/DVR')">NVR / DVR Sistemler</a>
+    </div>
+    <div class="fc">
+      <h4>Musteri Hizmetleri</h4>
+      <a>Sikca Sorulanlar</a><a>Iade &amp; Degisim</a><a>Kargo Takibi</a><a>Garanti</a>
+    </div>
+    <div class="fc">
+      <h4>Iletisim</h4>
+      <a href="/cdn-cgi/l/email-protection#68090c05010628050d1b1d1c1c0d030607460b0705"><span class="__cf_email__" data-cfemail="ff9e9b929691bf929a8c8a8b8b9a949190d19c9092">[email&#160;protected]</span></a>
+      <a>0850 123 45 67</a><a>Cizre, Sirnak</a>
+    </div>
+  </div>
+  <div class="fbot">
+    <p>2025 Mesut Tekno Market. Tum haklari saklidir.</p>
+    <p>Guvenli Odeme: Visa - Mastercard - Havale</p>
+  </div>
+</footer>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+let _cart = [], _favs = new Set();
+
+function toast(msg) {
+  const t = document.getElementById("toastEl");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 3200);
+}
+function scrollToProds() { document.getElementById("prodSec").scrollIntoView({behavior:"smooth"}); }
+function openModal() { document.getElementById("loginModal").classList.add("active"); document.getElementById("overlay").classList.add("active"); }
+function closeModal() { document.getElementById("loginModal").classList.remove("active"); document.getElementById("overlay").classList.remove("active"); }
+function closeAll() { closeModal(); document.getElementById("cartSb").classList.remove("open"); document.getElementById("overlay").classList.remove("active"); }
+function switchTab(t) {
+  document.querySelectorAll(".tab").forEach((b,i) => b.classList.toggle("on", (i===0&&t==="login")||(i===1&&t==="reg")));
+  document.getElementById("loginForm").style.display = t==="login"?"block":"none";
+  document.getElementById("regForm").style.display = t==="reg"?"block":"none";
+}
+
+function renderProducts(list) {
+  const g = document.getElementById("prodGrid");
+  if (!list||!list.length) { g.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:60px;color:#6b7280">Urun bulunamadi.</div>'; return; }
+  g.innerHTML = list.map((p,i) => {
+    const pr = p.sale||p.price, disc = p.sale ? Math.round((1-p.sale/p.price)*100) : 0;
+    const stars = Math.min(5, Math.round(p.rating||5));
+    const isFav = _favs.has(p.id);
+    return `<div class="pcard" style="animation-delay:${i*.04}s">
+      <div class="pimg">
+        ${disc>0?`<div class="dbadge">%${disc} INDIRIM</div>`:""}
+        <img src="${p.img||"https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&q=80"}" alt="${p.name}"
+             onerror="this.src='https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&q=80'">
+        <button class="fbtn${isFav?" fav":""}" onclick="toggleFav(event,'${p.id}')">${isFav?"&#10084;":"&#9825;"}</button>
+      </div>
+      <div class="pinfo">
+        <div class="pbrand">${p.brand}</div>
+        <div class="pname">${p.name}</div>
+        <div class="prat"><span class="stars">${"&#9733;".repeat(stars)}${"&#9734;".repeat(5-stars)}</span><span class="rc">(${(p.reviews||0).toLocaleString()})</span></div>
+        <div class="pprice"><span class="pnew">&#8378;${pr.toLocaleString()}</span>${p.sale?`<span class="pold">&#8378;${p.price.toLocaleString()}</span>`:""}</div>
+        <button class="bcart" onclick="addToCart(event,'${p.id}')">Sepete Ekle</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function filterCat(cat) {
+  G.filtered = G.products.filter(p => p.cat===cat);
+  document.getElementById("secTitle").textContent = cat;
+  document.querySelectorAll(".nl").forEach(l => l.classList.remove("on"));
+  renderProducts(G.filtered);
+  scrollToProds();
+}
+function filterProducts() {
+  const q = document.getElementById("searchInput").value.toLowerCase();
+  G.filtered = q ? G.products.filter(p => p.name.toLowerCase().includes(q)||p.brand.toLowerCase().includes(q)||p.cat.toLowerCase().includes(q)) : [...G.products];
+  document.getElementById("secTitle").textContent = q ? `"${document.getElementById("searchInput").value}" sonuclari` : "One Cikan Urunler";
+  renderProducts(G.filtered);
+}
+function resetFilter() {
+  document.getElementById("searchInput").value = "";
+  G.filtered = [...G.products];
+  document.getElementById("secTitle").textContent = "One Cikan Urunler";
+  document.querySelectorAll(".nl").forEach((l,i) => l.classList.toggle("on", i===0));
+  renderProducts(G.filtered);
+}
+
+function addToCart(e, id) {
+  e.stopPropagation();
+  const p = G.products.find(x=>x.id===id); if (!p) return;
+  const ex = _cart.find(x=>x.id===id);
+  if (ex) ex.qty++; else _cart.push({...p, qty:1});
+  updateCartUI(); toast(p.name+" sepete eklendi!");
+}
+function updateCartUI() {
+  const tot = _cart.reduce((s,x)=>s+x.qty,0);
+  document.getElementById("cartBadge").textContent = tot;
+  const items = document.getElementById("cartItems"), ft = document.getElementById("cartFt");
+  if (!_cart.length) { items.innerHTML='<div class="empty-c"><div class="ei">&#128722;</div><p>Sepetiniz bos</p></div>'; ft.style.display="none"; return; }
+  ft.style.display = "block";
+  items.innerHTML = _cart.map(it=>`
+    <div class="ci">
+      <img class="ci-img" src="${it.img||""}" alt="" onerror="this.src='https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=80&q=80'">
+      <div class="ci-info">
+        <div class="ci-nm">${it.name}</div>
+        <div class="ci-pr">&#8378;${((it.sale||it.price)*it.qty).toLocaleString()}</div>
+        <div class="ci-qt">
+          <button class="qbt" onclick="chQty('${it.id}',-1)">&#8722;</button>
+          <span class="qn">${it.qty}</span>
+          <button class="qbt" onclick="chQty('${it.id}',1)">+</button>
+          <button class="crm" onclick="rmCart('${it.id}')">&#128465; Kaldir</button>
+        </div>
+      </div>
+    </div>`).join("");
+  const grand = _cart.reduce((s,x)=>s+(x.sale||x.price)*x.qty,0);
+  document.getElementById("cartTotal").textContent = "&#8378;"+grand.toLocaleString();
+}
+function chQty(id,d) {
+  const it = _cart.find(x=>x.id===id); if (!it) return;
+  it.qty+=d; if (it.qty<=0) _cart=_cart.filter(x=>x.id!==id);
+  updateCartUI();
+}
+function rmCart(id) { _cart=_cart.filter(x=>x.id!==id); updateCartUI(); }
+function toggleCart() { document.getElementById("cartSb").classList.toggle("open"); document.getElementById("overlay").classList.toggle("active"); }
+function checkout() {
+  if (!G.loggedIn) { closeAll(); openModal(); toast("Satin almak icin giris yapin!"); return; }
+  _cart=[]
